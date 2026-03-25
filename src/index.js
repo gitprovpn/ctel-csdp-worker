@@ -8,6 +8,65 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
   "Access-Control-Max-Age": "86400",
 };
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "application/json; charset=utf-8",
+    },
+  });
+}
+
+function withCors(response) {
+  const newHeaders = new Headers(response.headers);
+  for (const [k, v] of Object.entries(corsHeaders)) {
+    newHeaders.set(k, v);
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: newHeaders,
+  });
+}
+
+export default {
+  async fetch(request, env, ctx) {
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: corsHeaders,
+      });
+    }
+
+    const url = new URL(request.url);
+
+    if (url.pathname === "/health") {
+      return new Response("OK", {
+        status: 200,
+        headers: corsHeaders,
+      });
+    }
+
+    if (url.pathname === "/api/projects") {
+      const { results } = await env.DB.prepare(
+        "SELECT * FROM projects ORDER BY created_at DESC"
+      ).all();
+      return json(results);
+    }
+
+    if (url.pathname === "/api/dashboard/summary") {
+      const summary = { ok: true };
+      return json(summary);
+    }
+
+    return new Response("Not found", {
+      status: 404,
+      headers: corsHeaders,
+    });
+  },
+};
 const router = Router();
 const PROJECT_PREFIX = 'CTEL-SA';
 
