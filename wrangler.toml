@@ -1,0 +1,33 @@
+name = "csdp-worker-v2"
+main = "src/index.js"
+compatibility_date = "2026-03-25"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "csdp-db"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[[kv_namespaces]]
+binding = "CONFIG_KV"
+id = "REPLACE_WITH_CONFIG_KV_ID"
+
+[[kv_namespaces]]
+binding = "CACHE_KV"
+id = "REPLACE_WITH_CACHE_KV_ID"
+
+
+[[queues.producers]]
+binding = "NOTIFY_QUEUE"
+queue = "notifications"
+
+[vars]
+APP_NAME = "Cyber Solution Delivery Platform"
+APP_BASE_URL = "https://example.workers.dev"
+DEFAULT_TZ = "Asia/Ho_Chi_Minh"
+MANAGEMENT_CHAT_PURPOSE = "management"
+OPS_CHAT_PURPOSE = "ops"
+APPROVAL_CHAT_PURPOSE = "approvals"
+
+[triggers]
+crons = ["0 1 * * *", "30 1 * * 1", "0 */2 * * *"]
