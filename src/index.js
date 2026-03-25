@@ -6,7 +6,7 @@ function getAllowedOrigins(env) {
 
   return fromEnv.length
     ? fromEnv
-    : ["https://gitprovpn.github.io"];
+    : ["https://gitprovpn.github.io","https://pjsa.pages.dev"];
 }
 
 function getCorsHeaders(request, env) {
