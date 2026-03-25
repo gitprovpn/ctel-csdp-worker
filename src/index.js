@@ -1,5 +1,13 @@
 import { Router } from 'itty-router';
 
+const ALLOWED_ORIGIN = "https://gitprovpn.github.io";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+  "Access-Control-Allow-Methods": "GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Max-Age": "86400",
+};
 const router = Router();
 const PROJECT_PREFIX = 'CTEL-SA';
 
