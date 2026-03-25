@@ -6,15 +6,15 @@ workers_dev = true
 [[d1_databases]]
 binding = "DB"
 database_name = "csdp-db"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "fa983fef-907e-4e11-ab17-ce5496e68aac"
 
 [[kv_namespaces]]
 binding = "CONFIG_KV"
-id = "REPLACE_WITH_CONFIG_KV_ID"
+id = "9669de06286d422eba799db1ab8f933f"
 
 [[kv_namespaces]]
 binding = "CACHE_KV"
-id = "REPLACE_WITH_CACHE_KV_ID"
+id = "23275d53bf94428389da011e9b59919a"
 
 
 [[queues.producers]]
@@ -23,7 +23,7 @@ queue = "notifications"
 
 [vars]
 APP_NAME = "Cyber Solution Delivery Platform"
-APP_BASE_URL = "https://example.workers.dev"
+APP_BASE_URL = "https://ctel-csdp-worker.thanhlm120797.workers.dev"
 DEFAULT_TZ = "Asia/Ho_Chi_Minh"
 MANAGEMENT_CHAT_PURPOSE = "management"
 OPS_CHAT_PURPOSE = "ops"
