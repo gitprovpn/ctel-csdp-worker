@@ -126,38 +126,10 @@ function computeHealth(project = {}) {
 
 async function readProjects(env) {
   if (!(await tableExists(env, "projects"))) return [];
-
   const cols = await getColumns(env, "projects");
-  const idCol = pick(cols, ["id"]);
-  const codeCol = pick(cols, ["project_code", "code"]);
-  const nameCol = pick(cols, ["project_name", "name", "title"]);
-  const typeCol = pick(cols, ["project_type", "type"]);
-  const stageCol = pick(cols, ["stage", "current_stage"]);
-  const ownerCol = pick(cols, ["owner", "owner_name", "assigned_to"]);
-  const statusCol = pick(cols, ["health_status", "status"]);
-  const scoreCol = pick(cols, ["health_score"]);
-  const reasonCol = pick(cols, ["health_reason"]);
-  const createdAtCol = pick(cols, ["created_at"]);
-  const dueDateCol = pick(cols, ["due_date", "target_date"]);
-
-  const rows = await safeAll(
-    env,
-    `SELECT
-      ${idCol ? `${idCol}` : "NULL"} AS id,
-      ${codeCol ? `${codeCol}` : "NULL"} AS project_code,
-      ${nameCol ? `${nameCol}` : "NULL"} AS project_name,
-      ${typeCol ? `${typeCol}` : "'GENERAL'"} AS project_type,
-      ${stageCol ? `${stageCol}` : "'intake'"} AS stage,
-      ${ownerCol ? `${ownerCol}` : "NULL"} AS owner,
-      ${statusCol ? `${statusCol}` : "'on_track'"} AS health_status,
-      ${scoreCol ? `${scoreCol}` : "100"} AS health_score,
-      ${reasonCol ? `${reasonCol}` : "'Healthy baseline'"} AS health_reason,
-      ${createdAtCol ? `${createdAtCol}` : "NULL"} AS created_at,
-      ${dueDateCol ? `${dueDateCol}` : "NULL"} AS due_date
-     FROM projects
-     ORDER BY ${createdAtCol || idCol || "rowid"} DESC`
-  );
-
+  const idCol = pick(cols, ["id"]); const codeCol = pick(cols, ["project_code", "code"]); const nameCol = pick(cols, ["project_name", "name", "title"]); const typeCol = pick(cols, ["project_type", "type"]); const stageCol = pick(cols, ["stage", "current_stage"]); const ownerCol = pick(cols, ["owner", "owner_name", "assigned_to"]); const ownerUserIdCol = pick(cols, ["owner_user_id"]); const statusCol = pick(cols, ["health_status", "status"]); const scoreCol = pick(cols, ["health_score"]); const reasonCol = pick(cols, ["health_reason"]); const createdAtCol = pick(cols, ["created_at"]); const updatedAtCol = pick(cols, ["updated_at"]); const dueDateCol = pick(cols, ["due_date", "target_date"]);
+  const ownerNameExpr = ownerUserIdCol ? `(SELECT display_name FROM users u WHERE u.id = projects.${ownerUserIdCol} LIMIT 1)` : (ownerCol ? ownerCol : "NULL");
+  const rows = await safeAll(env, `SELECT ${idCol ? `${idCol}` : "NULL"} AS id, ${codeCol ? `${codeCol}` : "NULL"} AS project_code, ${nameCol ? `${nameCol}` : "NULL"} AS project_name, ${typeCol ? `${typeCol}` : "'GENERAL'"} AS project_type, ${stageCol ? `${stageCol}` : "'intake'"} AS stage, ${ownerCol ? `${ownerCol}` : "NULL"} AS owner, ${ownerUserIdCol ? `${ownerUserIdCol}` : "NULL"} AS owner_user_id, ${ownerNameExpr} AS owner_name, ${statusCol ? `${statusCol}` : "'on_track'"} AS health_status, ${scoreCol ? `${scoreCol}` : "100"} AS health_score, ${reasonCol ? `${reasonCol}` : "'Healthy baseline'"} AS health_reason, ${createdAtCol ? `${createdAtCol}` : "NULL"} AS created_at, ${updatedAtCol ? `${updatedAtCol}` : "NULL"} AS updated_at, ${dueDateCol ? `${dueDateCol}` : "NULL"} AS due_date FROM projects ORDER BY ${updatedAtCol || createdAtCol || idCol || "rowid"} DESC`);
   return rows;
 }
 
@@ -361,6 +333,46 @@ async function getPendingApprovals(env) {
   );
 }
 
+
+async function getUsers(env) {
+  if (!(await tableExists(env, "users"))) return [];
+  const cols = await getColumns(env, "users");
+  const idCol = pick(cols, ["id"]); const nameCol = pick(cols, ["display_name", "name"]); const roleCol = pick(cols, ["role"]); const deptCol = pick(cols, ["department"]); const activeCol = pick(cols, ["is_active"]);
+  return await safeAll(env, `SELECT ${idCol || "NULL"} AS id, ${nameCol || "NULL"} AS display_name, ${roleCol || "NULL"} AS role, ${deptCol || "NULL"} AS department FROM users ${activeCol ? `WHERE COALESCE(${activeCol},1)=1` : ""} ORDER BY ${nameCol || idCol || "rowid"} ASC`);
+}
+
+async function getProjectOptions(env) {
+  const projects = await readProjects(env);
+  return projects.map((p) => ({ id: p.id, name: p.project_name, project_code: p.project_code, owner_user_id: p.owner_user_id, owner_name: p.owner_name || p.owner, stage: p.stage, health_status: p.health_status, health_reason: p.health_reason }));
+}
+
+async function updateProjectAssignment(request, env, projectId) {
+  const body = await request.json().catch(() => ({}));
+  const id = Number(projectId); if (!Number.isFinite(id)) throw new Error("Invalid project id");
+  const cols = await getColumns(env, "projects");
+  const idCol = pick(cols, ["id"]); const ownerUserIdCol = pick(cols, ["owner_user_id"]); const ownerCol = pick(cols, ["owner", "owner_name", "assigned_to"]); const stageCol = pick(cols, ["stage", "current_stage"]); const statusCol = pick(cols, ["health_status", "status"]); const reasonCol = pick(cols, ["health_reason"]); const updatedAtCol = pick(cols, ["updated_at"]);
+  const previous = await safeFirst(env, `SELECT * FROM projects WHERE ${idCol} = ? LIMIT 1`, [id]);
+  if (!previous) return { ok: false, error: "Project not found" };
+  const sets = []; const binds = []; const set = (col, value) => { if (!col || value === undefined) return; sets.push(`${col} = ?`); binds.push(value); };
+  if (ownerUserIdCol && body.owner_user_id !== undefined) set(ownerUserIdCol, body.owner_user_id);
+  if (ownerCol && body.owner_name !== undefined) set(ownerCol, body.owner_name);
+  if (stageCol && body.stage !== undefined) set(stageCol, body.stage);
+  if (statusCol && body.health_status !== undefined) set(statusCol, body.health_status);
+  if (reasonCol && body.health_reason !== undefined) set(reasonCol, body.health_reason);
+  if (updatedAtCol) set(updatedAtCol, new Date().toISOString());
+  if (!sets.length) return { ok: false, error: "No supported fields to update" };
+  binds.push(id);
+  await env.DB.prepare(`UPDATE projects SET ${sets.join(", ")} WHERE ${idCol} = ?`).bind(...binds).run();
+  if (await tableExists(env, "audit_events")) {
+    const auditCols = await getColumns(env, "audit_events");
+    const fields = []; const placeholders = []; const values = []; const push = (col, val) => { if (!col) return; fields.push(col); placeholders.push("?"); values.push(val); };
+    push(pick(auditCols, ["actor_user_id"]), body.owner_user_id ?? null); push(pick(auditCols, ["actor_source"]), "web"); push(pick(auditCols, ["entity_type"]), "project"); push(pick(auditCols, ["entity_id"]), id); push(pick(auditCols, ["action"]), "update_assignment"); push(pick(auditCols, ["previous_json"]), JSON.stringify(previous)); push(pick(auditCols, ["next_json"]), JSON.stringify(body)); push(pick(auditCols, ["metadata_json"]), JSON.stringify({ source: "sa-team-map-v6" }));
+    if (fields.length) await env.DB.prepare(`INSERT INTO audit_events (${fields.join(", ")}) VALUES (${placeholders.join(", ")})`).bind(...values).run();
+  }
+  const updated = (await enrichProjects(env, await readProjects(env))).find((p) => Number(p.id) === id);
+  return { ok: true, project: updated || null };
+}
+
 async function createProject(request, env) {
   const body = await request.json().catch(() => ({}));
 
@@ -371,7 +383,8 @@ async function createProject(request, env) {
   const name = body.project_name || body.name || "Untitled Project";
   const type = body.project_type || "GENERAL";
   const stage = body.stage || "intake";
-  const owner = body.owner || "Unassigned";
+  const owner = body.owner || body.owner_name || "Unassigned";
+  const ownerUserId = body.owner_user_id ?? null;
   const dueDate = body.due_date || null;
   const createdAt = new Date().toISOString();
 
@@ -381,6 +394,7 @@ async function createProject(request, env) {
   const typeCol = pick(cols, ["project_type", "type"]);
   const stageCol = pick(cols, ["stage", "current_stage"]);
   const ownerCol = pick(cols, ["owner", "owner_name", "assigned_to"]);
+  const ownerUserIdCol = pick(cols, ["owner_user_id"]);
   const dueDateCol = pick(cols, ["due_date", "target_date"]);
   const statusCol = pick(cols, ["health_status", "status"]);
   const scoreCol = pick(cols, ["health_score"]);
@@ -403,6 +417,7 @@ async function createProject(request, env) {
   push(typeCol, type);
   push(stageCol, stage);
   push(ownerCol, owner);
+  push(ownerUserIdCol, ownerUserId);
   push(dueDateCol, dueDate);
   push(statusCol, "on_track");
   push(scoreCol, 100);
@@ -468,6 +483,20 @@ export default {
       if (path === "/api/projects" && request.method === "POST") {
         const result = await createProject(request, env);
         return json(result, request, env, 201);
+      }
+
+      if (path === "/api/users" && request.method === "GET") {
+        return json(await getUsers(env), request, env);
+      }
+
+      if (path === "/api/projects/options" && request.method === "GET") {
+        return json(await getProjectOptions(env), request, env);
+      }
+
+      const projectPatchMatch = path.match(/^\/api\/projects\/(\d+)$/);
+      if (projectPatchMatch && request.method === "PATCH") {
+        const result = await updateProjectAssignment(request, env, projectPatchMatch[1]);
+        return json(result, request, env, result.ok === false ? 404 : 200);
       }
 
       if (path === "/api/dashboard/summary" && request.method === "GET") {
