@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SA CTEL Daily Project Map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">CTEL • SA Team • Mobile First</div>
+        <h1>Daily Project Map</h1>
+        <p>Theo dõi nhanh các dự án team SA CTEL đang handle trong ngày bằng dữ liệu lấy trực tiếp từ backend.</p>
+      </div>
+      <div class="topbar-actions">
+        <button id="refreshBtn" class="btn btn-primary" type="button">Làm mới</button>
+      </div>
+    </header>
+
+    <main class="stack">
+      <section class="panel status-panel">
+        <div>
+          <div class="panel-title-row">
+            <h2>Trạng thái kết nối</h2>
+            <span id="apiBadge" class="chip neutral">Checking…</span>
+          </div>
+          <p id="apiStatusText" class="subtle">Đang kiểm tra backend và tải dữ liệu dự án…</p>
+        </div>
+      </section>
+
+      <section class="summary-grid" id="summaryCards"></section>
+
+      <section class="panel">
+        <div class="panel-head compact">
+          <div>
+            <h2>Thành viên team</h2>
+            <p>Chạm vào tên để lọc các dự án mà từng người đang handle.</p>
+          </div>
+          <div id="activeFilterText" class="subtle">Tất cả thành viên</div>
+        </div>
+        <div id="memberBoard" class="member-board"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head compact">
+          <div>
+            <h2>Pixel map theo zone</h2>
+            <p>Mỗi dự án đang active sẽ tạo marker tại zone tương ứng của người phụ trách.</p>
+          </div>
+        </div>
+        <div class="pixel-map-wrap">
+          <canvas id="pixelCanvas" width="900" height="520" aria-label="Pixel map team SA CTEL"></canvas>
+        </div>
+        <div id="pixelLegend" class="legend"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head compact">
+          <div>
+            <h2>Danh sách dự án từ backend</h2>
+            <p>Front-end chỉ đọc dữ liệu, không lưu localStorage và không tạo dữ liệu demo.</p>
+          </div>
+          <div id="projectCount" class="subtle">0 dự án</div>
+        </div>
+        <div id="projectList" class="project-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
